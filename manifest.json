@@ -29,8 +29,8 @@
   "commands": {
     "quick-note": {
       "suggested_key": {
-        "default": "Alt+Shift+N",
-        "mac": "Alt+Shift+N"
+        "default": "Alt+N",
+        "mac": "Alt+N"
       },
       "description": "Créer une note rapide sur la tâche active"
     }

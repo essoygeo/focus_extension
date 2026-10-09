@@ -316,39 +316,39 @@ chrome.commands.onCommand.addListener((command) => {
 
 async function handleQuickNoteCommand() {
   const tasks = await Storage.getTasks();
-  const activeTask =
-    tasks.find(t => t.status === 'in_progress') ||
-    tasks.find(t => t.status === 'overdue') ||
-    tasks.find(t => t.status === 'todo') ||
-    tasks
-      .filter(t => t.status !== 'done')
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
 
-  if (!activeTask) {
+  if (tasks.length === 0) {
     notify('notif_quicknote_warning', {
       title: '📝 Note rapide',
-      message: 'Aucune tâche active.',
+      message: 'Aucune tâche disponible.',
       contextMessage: "Créez d'abord une tâche pour y rattacher une note.",
       priority: 1
     });
     return;
   }
 
+  const nonDone = tasks.filter(t => t.status !== 'done');
+  const activeTask =
+    nonDone.find(t => t.status === 'in_progress') ||
+    nonDone.find(t => t.status === 'overdue') ||
+    nonDone.find(t => t.status === 'todo') ||
+    nonDone.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0] ||
+    null;
+
   try {
     await chrome.storage.session.set({
-      pendingQuickNoteTaskId: activeTask.id,
+      pendingQuickNoteTaskId: activeTask ? activeTask.id : null,
       pendingQuickNoteTs: Date.now()
     });
   } catch (e) { /* storage.session indisponible */ }
 
+  const url = chrome.runtime.getURL(
+    'popup/popup.html?quickNote=1' + (activeTask ? `&taskId=${encodeURIComponent(activeTask.id)}` : '')
+  );
+
   try {
     await chrome.action.openPopup();
   } catch (e) {
-    chrome.windows.create({
-      url: chrome.runtime.getURL(`popup/popup.html?quickNote=1&taskId=${encodeURIComponent(activeTask.id)}`),
-      type: 'popup',
-      width: 460,
-      height: 640
-    });
+    chrome.windows.create({ url, type: 'popup', width: 460, height: 640 });
   }
 }

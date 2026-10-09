@@ -72,6 +72,8 @@ const notesHeaderCount = document.getElementById('notesHeaderCount');
 // Quick Note Modal
 const noteModal = document.getElementById('noteModal');
 const noteModalTitle = document.getElementById('noteModalTitle');
+const noteTaskGroup = document.getElementById('noteTaskGroup');
+const noteTaskSelect = document.getElementById('noteTaskSelect');
 const noteTextInput = document.getElementById('noteTextInput');
 const noteForm = document.getElementById('noteForm');
 const btnCloseNoteModal = document.getElementById('btnCloseNoteModal');
@@ -308,6 +310,11 @@ function createTaskCard(task) {
 
   const { formattedTime, percentage, isOverdue } = computeTaskTimeDetails(task);
 
+  const noteCount = (task.notes || []).length;
+  const noteBadge = noteCount > 0
+    ? `<span class="note-count-badge" title="${noteCount} note${noteCount > 1 ? 's' : ''}">${noteCount > 9 ? '9+' : noteCount}</span>`
+    : '';
+
   card.innerHTML = `
     <div class="task-card-header">
       <div class="task-title">${escapeHtml(task.title)}</div>
@@ -336,8 +343,8 @@ function createTaskCard(task) {
       </div>
 
       <div class="card-actions-right">
-        <button class="icon-action-btn btn-note-task" data-id="${task.id}" title="Note rapide">
-          ${SVG_BOOKMARK}
+        <button class="icon-action-btn btn-note-task${noteCount > 0 ? ' has-notes' : ''}" data-id="${task.id}" title="Note rapide">
+          ${SVG_BOOKMARK}${noteBadge}
         </button>
         <button class="icon-action-btn btn-edit-task" data-id="${task.id}" title="Modifier">
           ${SVG_EDIT}
@@ -683,6 +690,23 @@ function createChatBubble(msg, task) {
       <div class="bubble-content">${escapeHtml(msg.content)}</div>
     `;
   } else {
+    const isErrorMsg = msg.isError || /^(❌|⚠️)/.test((msg.content || '').trim());
+    const isGenerating = msg.isGenerating;
+
+    const footerActions = isErrorMsg
+      ? `<button class="btn-msg-action btn-retry-msg" title="Renvoyer le même message">
+           ${SVG_REFRESH}<span>Réessayer</span>
+         </button>`
+      : isGenerating
+        ? ``
+        : `<button class="btn-msg-action btn-save-msg-note" title="Enregistrer cette réponse dans les notes">
+             ${SVG_BOOKMARK}<span>Enregistrer en note</span>
+           </button>
+           <button class="btn-msg-action btn-copy-msg" title="Copier la réponse">
+             ${SVG_COPY}<span>Copier</span>
+           </button>`;
+
+    bubble.classList.toggle('chat-bubble-error', isErrorMsg);
     bubble.innerHTML = `
       <div class="ai-bubble-header">
         <div class="ai-header-left">
@@ -690,14 +714,9 @@ function createChatBubble(msg, task) {
           <span class="ai-name">Assistant Focus</span>
         </div>
       </div>
-      <div class="bubble-content markdown-body">${parseMarkdown(msg.content)}</div>
+      <div class="bubble-content markdown-body">${isGenerating ? '<span class="ai-typing"><span></span><span></span><span></span></span>' : parseMarkdown(msg.content)}</div>
       <div class="bubble-footer-actions">
-        <button class="btn-msg-action btn-save-msg-note" title="Enregistrer cette réponse dans les notes">
-          ${SVG_BOOKMARK}<span>Enregistrer en note</span>
-        </button>
-        <button class="btn-msg-action btn-copy-msg" title="Copier la réponse">
-          ${SVG_COPY}<span>Copier</span>
-        </button>
+        ${footerActions}
       </div>
     `;
 
@@ -706,34 +725,67 @@ function createChatBubble(msg, task) {
       btn.innerHTML = `${icon}<span>${label}</span>`;
     };
 
-    const btnSave = bubble.querySelector('.btn-save-msg-note');
-    btnSave.addEventListener('click', async () => {
-      if (!task.notes) task.notes = [];
-      task.notes.unshift({
-        id: 'note_' + Date.now(),
-        text: msg.content,
-        source: 'ai',
-        createdAt: Date.now()
-      });
-      await Storage.saveTasks(tasks);
-      renderTaskNotes();
+    const btnRetry = bubble.querySelector('.btn-retry-msg');
+    if (btnRetry) {
+      btnRetry.addEventListener('click', () => retryAiMessage(msg.id));
+    }
 
-      btnSave.classList.add('action-success');
-      btnSave.innerHTML = `${SVG_CHECK}<span>Enregistré !</span>`;
-      setTimeout(() => resetActionBtn(btnSave, SVG_BOOKMARK, 'Enregistrer en note'), 2000);
-    });
+    const btnSave = bubble.querySelector('.btn-save-msg-note');
+    if (btnSave) {
+      btnSave.addEventListener('click', async () => {
+        if (!task.notes) task.notes = [];
+        task.notes.unshift({
+          id: 'note_' + Date.now(),
+          text: msg.content,
+          source: 'ai',
+          createdAt: Date.now()
+        });
+        await Storage.saveTasks(tasks);
+        renderTaskNotes();
+
+        btnSave.classList.add('action-success');
+        btnSave.innerHTML = `${SVG_CHECK}<span>Enregistré !</span>`;
+        setTimeout(() => resetActionBtn(btnSave, SVG_BOOKMARK, 'Enregistrer en note'), 2000);
+      });
+    }
 
     const btnCopy = bubble.querySelector('.btn-copy-msg');
-    btnCopy.addEventListener('click', () => {
-      navigator.clipboard.writeText(msg.content).then(() => {
-        btnCopy.classList.add('action-success');
-        btnCopy.innerHTML = `${SVG_CHECK}<span>Copié !</span>`;
-        setTimeout(() => resetActionBtn(btnCopy, SVG_COPY, 'Copier'), 2000);
+    if (btnCopy) {
+      btnCopy.addEventListener('click', () => {
+        navigator.clipboard.writeText(msg.content).then(() => {
+          btnCopy.classList.add('action-success');
+          btnCopy.innerHTML = `${SVG_CHECK}<span>Copié !</span>`;
+          setTimeout(() => resetActionBtn(btnCopy, SVG_COPY, 'Copier'), 2000);
+        });
       });
-    });
+    }
   }
 
   return bubble;
+}
+
+async function retryAiMessage(errorMsgId) {
+  if (currentAiAbortController) return;
+  if (!activeAiTaskId) return;
+  const task = tasks.find(t => t.id === activeAiTaskId);
+  if (!task || !task.chatHistory) return;
+
+  const idx = task.chatHistory.findIndex(m => m.id === errorMsgId);
+  if (idx === -1) return;
+
+  let userIdx = -1;
+  for (let i = idx - 1; i >= 0; i--) {
+    if (task.chatHistory[i].role === 'user') { userIdx = i; break; }
+  }
+  if (userIdx === -1) return;
+
+  const prompt = task.chatHistory[userIdx].content;
+
+  task.chatHistory.splice(idx, 1);
+  task.chatHistory.splice(userIdx, 1);
+  await Storage.saveTasks(tasks);
+
+  handleAiSubmit(prompt);
 }
 
 async function handleAiSubmit(promptText) {
@@ -777,7 +829,8 @@ async function handleAiSubmit(promptText) {
         id: errorMsgId,
         role: 'assistant',
         content: `⚠️ **Clé API manquante pour ${provider ? provider.name : 'le fournisseur'}.**\n\nVeuillez d'abord configurer une clé API valide dans la page d'options de Focus.`,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        isError: true
       };
       task.chatHistory.push(errorMsg);
       await Storage.saveTasks(tasks);
@@ -790,7 +843,8 @@ async function handleAiSubmit(promptText) {
     assistantMsg = {
       id: assistantMsgId,
       role: 'assistant',
-      content: '⏳ Génération de la réponse...',
+      content: '…',
+      isGenerating: true,
       timestamp: Date.now()
     };
     task.chatHistory.push(assistantMsg);
@@ -803,25 +857,28 @@ async function handleAiSubmit(promptText) {
       taskDescription: task.description,
       chatHistory: task.chatHistory.filter(m => m.id !== assistantMsgId),
       signal: controller.signal,
-      onChunk: (receivedContent) => {
-        fullText = receivedContent;
-        assistantMsg.content = receivedContent;
+    onChunk: (receivedContent) => {
+      fullText = receivedContent;
+      assistantMsg.content = receivedContent;
+      assistantMsg.isGenerating = fullText.trim().length === 0;
 
-        const activeBubble = chatMessagesContainer.querySelector(`[data-msg-id="${assistantMsgId}"] .bubble-content`);
-        if (activeBubble) {
-          activeBubble.innerHTML = parseMarkdown(receivedContent);
-          chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-        }
+      const activeBubble = chatMessagesContainer.querySelector(`[data-msg-id="${assistantMsgId}"] .bubble-content`);
+      if (activeBubble) {
+        activeBubble.innerHTML = parseMarkdown(receivedContent) || '<span class="ai-typing"><span></span><span></span><span></span></span>';
+        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
       }
+    }
     });
 
     assistantMsg.content = fullText;
+    delete assistantMsg.isGenerating;
     await Storage.saveTasks(tasks);
 
   } catch (err) {
     if (err.message !== 'Génération annulée.') {
       if (assistantMsg) {
         assistantMsg.content = `❌ Erreur : ${err.message}`;
+        assistantMsg.isError = true;
       }
       await Storage.saveTasks(tasks);
       renderChatMessages();
@@ -845,26 +902,43 @@ async function resetChatHistory() {
 }
 
 // ── Quick personal note (linked to a specific task) ──────────────
-let quickNoteTaskId = null;
+function populateNoteTaskSelect(selectedId) {
+  noteTaskSelect.innerHTML = '';
+  const ordered = [...tasks].sort((a, b) => {
+    const rank = s => (s === 'in_progress' ? 0 : s === 'overdue' ? 1 : s === 'todo' ? 2 : 3);
+    return rank(a.status) - rank(b.status);
+  });
 
-function openQuickNote(taskId) {
-  const task = tasks.find(t => t.id === taskId);
-  if (!task) return;
-  quickNoteTaskId = taskId;
-  noteModalTitle.textContent = `Note rapide — ${task.title}`;
+  ordered.forEach(task => {
+    const opt = document.createElement('option');
+    opt.value = task.id;
+    opt.textContent = task.title;
+    noteTaskSelect.appendChild(opt);
+  });
+
+  if (selectedId && ordered.some(t => t.id === selectedId)) {
+    noteTaskSelect.value = selectedId;
+  }
+}
+
+function openQuickNote(taskId, allowChoose = false) {
+  if (tasks.length === 0) return;
+  populateNoteTaskSelect(taskId || null);
+  noteTaskGroup.classList.toggle('hidden', !(allowChoose && tasks.length > 1));
+  noteModalTitle.textContent = 'Note rapide';
   noteTextInput.value = '';
   noteModal.classList.remove('hidden');
   setTimeout(() => noteTextInput.focus(), 60);
 }
 
 function closeQuickNote() {
-  quickNoteTaskId = null;
   noteModal.classList.add('hidden');
 }
 
 async function saveQuickNote() {
   const text = noteTextInput.value.trim();
-  const task = quickNoteTaskId ? tasks.find(t => t.id === quickNoteTaskId) : null;
+  const taskId = noteTaskSelect.value;
+  const task = taskId ? tasks.find(t => t.id === taskId) : null;
   if (!text || !task) {
     closeQuickNote();
     return;
@@ -879,30 +953,31 @@ async function saveQuickNote() {
   });
   await Storage.saveTasks(tasks);
 
-  if (activeAiTaskId === quickNoteTaskId) renderTaskNotes();
+  if (activeAiTaskId === taskId) renderTaskNotes();
   closeQuickNote();
 }
 
 async function handlePendingQuickNote() {
+  let shouldOpen = false;
   let targetId = null;
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('quickNote') === '1') {
+    shouldOpen = true;
     targetId = params.get('taskId');
   }
 
   try {
     const pending = await chrome.storage.session.get(['pendingQuickNoteTaskId', 'pendingQuickNoteTs']);
-    if (pending.pendingQuickNoteTaskId && pending.pendingQuickNoteTs &&
-        Date.now() - pending.pendingQuickNoteTs < 10000) {
-      targetId = pending.pendingQuickNoteTaskId;
+    if (pending.pendingQuickNoteTs && Date.now() - pending.pendingQuickNoteTs < 10000) {
+      shouldOpen = true;
+      targetId = pending.pendingQuickNoteTaskId || null;
     }
     await chrome.storage.session.remove(['pendingQuickNoteTaskId', 'pendingQuickNoteTs']);
   } catch (e) { /* storage.session indisponible */ }
 
-  if (targetId && tasks.some(t => t.id === targetId)) {
-    openQuickNote(targetId);
-  }
+  if (!shouldOpen || tasks.length === 0) return;
+  openQuickNote(targetId && tasks.some(t => t.id === targetId) ? targetId : null, true);
 }
 
 async function addPersonalNote(rawText) {
