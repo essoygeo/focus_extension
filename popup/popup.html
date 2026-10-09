@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus - Gestions & Productivité</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+        </div>
+        <h1>Focus</h1>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnNewTask" class="btn btn-primary btn-sm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Nouvelle tâche
+        </button>
+
+        <div id="blockingStatusBadge" class="status-badge inactive" title="Statut du blocage de sites">
+          <svg class="badge-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span class="badge-text">Inactif</span>
+        </div>
+
+        <button id="btnOpenOptions" class="icon-btn" title="Ouvrir les Options">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Bar Spanning Full Width for all 5 Tabs -->
+    <div class="sub-header">
+      <div class="filter-tabs">
+        <button class="tab-btn active" data-filter="all">
+          Toutes <span class="tab-count" id="count-all">0</span>
+        </button>
+        <button class="tab-btn" data-filter="in_progress">
+          En cours <span class="tab-count count-in_progress" id="count-in_progress">0</span>
+        </button>
+        <button class="tab-btn" data-filter="overdue">
+          En retard <span class="tab-count count-overdue" id="count-overdue">0</span>
+        </button>
+        <button class="tab-btn" data-filter="todo">
+          À faire <span class="tab-count" id="count-todo">0</span>
+        </button>
+        <button class="tab-btn" data-filter="done">
+          Terminées <span class="tab-count" id="count-done">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Task Form Modal -->
+    <div id="taskModal" class="modal hidden">
+      <div class="modal-content card">
+        <div class="modal-header">
+          <h3 id="modalTitle">Nouvelle Tâche</h3>
+          <button id="btnCloseModal" class="close-btn" aria-label="Fermer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <form id="taskForm">
+          <input type="hidden" id="taskId">
+          
+          <div class="form-group">
+            <label for="taskTitleInput">Titre de la tâche *</label>
+            <input type="text" id="taskTitleInput" placeholder="Ex: Rédiger le rapport hebdomadaire" required autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="taskDescInput">Description (facultative)</label>
+            <textarea id="taskDescInput" rows="2" placeholder="Objectifs, détails ou consignes..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col">
+              <label for="taskDurationInput">Durée prévue (minutes) *</label>
+              <input type="number" id="taskDurationInput" min="1" max="1440" value="25" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Rappels activés</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="remind10m" value="before_10m">
+                <span>10 minutes avant la fin</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="remindEnd" value="at_end" checked>
+                <span>À la fin de la durée prévue</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="remindRepeat5m" value="repeat_5m_after" checked>
+                <span>Toutes les 5 minutes tant que non terminée</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btnCancelTask" class="btn btn-secondary">Annuler</button>
+            <button type="submit" class="btn btn-primary">Enregistrer la tâche</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Task List Container -->
+    <main class="task-list-container">
+      <div id="emptyState" class="empty-state hidden">
+        <div class="empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <h3>Aucune tâche dans cette liste</h3>
+        <p>Cliquez sur "+ Nouvelle tâche" pour démarrer votre session de travail.</p>
+      </div>
+
+      <div id="taskList" class="task-list"></div>
+    </main>
+
+    <!-- AI Multi-Turn Interactive Chat Drawer Panel -->
+    <div id="aiPanel" class="ai-panel hidden">
+      <!-- AI Panel Header -->
+      <div class="ai-panel-header">
+        <div class="ai-title">
+          <div class="ai-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 id="aiTaskTitle">Discussion IA</h3>
+            <span class="privacy-notice">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              Seuls le texte de la tâche et vos questions sont envoyés à l'IA.
+            </span>
+          </div>
+        </div>
+
+        <div class="ai-header-controls">
+          <button id="btnClearChatHistory" class="btn-icon-only icon-btn" title="Réinitialiser la discussion">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+          </button>
+
+          <button id="btnCloseAiPanel" class="close-btn" aria-label="Fermer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Provider Selector Bar -->
+      <div class="ai-provider-subbar">
+        <div class="provider-field">
+          <label for="aiProviderSelect">Fournisseur :</label>
+          <select id="aiProviderSelect" class="form-select form-select-sm"></select>
+        </div>
+        <button id="btnToggleNotes" class="btn-sm btn-outline">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+          Notes (<span id="notesCountBadge">0</span>)
+        </button>
+      </div>
+
+      <!-- Chat Stream Body -->
+      <div class="ai-panel-body">
+        <!-- Quick Action Prompt Chips -->
+        <div class="quick-prompts">
+          <button class="prompt-chip" data-prompt="Explique clairement cette tâche et découpe son enjeu principal.">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18h6M10 22h4M15.09 14A6 6 0 0 0 18 9 6 6 0 0 0 6 9c0 2.22 1.21 4.15 3.01 5.17"></path>
+            </svg>
+            Expliquer
+          </button>
+          <button class="prompt-chip" data-prompt="Propose un plan d'action structuré en étapes concrètes et ordonnées.">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            Plan d'action
+          </button>
+          <button class="prompt-chip" data-prompt="Analyse cette tâche et donne une estimation réaliste du temps nécessaire.">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Temps estimé
+          </button>
+          <button class="prompt-chip" data-prompt="Donne une liste de ressources utiles, méthodes ou documentations recommandées.">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Ressources
+          </button>
+        </div>
+
+        <!-- Chat Stream Messages List -->
+        <div id="chatMessagesContainer" class="chat-messages-container">
+          <div class="chat-welcome-box">
+            <p>Bonjour ! Posez n'importe quelle question ou demandez un conseil sur cette tâche. L'assistant conserve le contexte de votre conversation.</p>
+          </div>
+        </div>
+
+        <!-- Task Saved Notes Section (Toggleable) -->
+        <div id="taskNotesDrawer" class="task-notes-drawer hidden">
+          <div class="notes-header">
+            <h4>Notes enregistrées</h4>
+            <button id="btnCloseNotesDrawer" class="close-btn">&times;</button>
+          </div>
+          <div id="taskNotesList" class="notes-list">
+            <p class="no-notes">Aucune note enregistrée pour l'instant.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Form Footer -->
+      <div class="ai-chat-footer">
+        <form id="aiQueryForm" class="ai-query-form">
+          <div class="query-input-wrap">
+            <textarea id="aiQuestionInput" rows="1" placeholder="Discuter avec l'IA sur cette tâche..." required></textarea>
+            <button type="submit" id="btnSubmitAi" class="btn btn-primary btn-icon-only" title="Envoyer">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

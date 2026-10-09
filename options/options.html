@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus - Options & Configuration</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+        </div>
+        <h2>Focus</h2>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#blocking" class="nav-item active" data-target="section-blocking">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Sites Bloqués
+          <span id="navCountSites" class="nav-count-badge">0</span>
+        </a>
+        <a href="#reminders" class="nav-item" data-target="section-reminders">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          Rappels par Défaut
+        </a>
+        <a href="#ai" class="nav-item" data-target="section-ai">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+          </svg>
+          Fournisseurs IA
+          <span id="navCountProviders" class="nav-count-badge">0</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="version">Focus v1.0.0</span>
+        <span class="privacy">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Clés sécurisées localement
+        </span>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Notification toast banner -->
+      <div id="toastNotification" class="toast hidden"></div>
+
+      <!-- SECTION 1: BLOCAGE DE SITES -->
+      <section id="section-blocking" class="config-section active">
+        <div class="section-header">
+          <h2>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            Blocage de Sites Perturbants
+          </h2>
+          <p>Configurez les règles et la liste des domaines à rediriger pendant vos sessions de travail.</p>
+        </div>
+
+        <div class="card">
+          <h3>Mode de Blocage</h3>
+          <div class="radio-group">
+            <label class="radio-card">
+              <input type="radio" name="blockMode" value="any_uncompleted" checked>
+              <div class="radio-content">
+                <strong>Bloquer tant qu'au moins une tâche n'est pas terminée</strong>
+                <p>Les sites restants seront bloqués jusqu'à ce que toutes vos tâches soient complétées.</p>
+              </div>
+            </label>
+
+            <label class="radio-card">
+              <input type="radio" name="blockMode" value="only_in_progress">
+              <div class="radio-content">
+                <strong>Bloquer uniquement lorsqu'une tâche est "en cours"</strong>
+                <p>Le blocage est actif uniquement pendant qu'un compte à rebours est en fonctionnement.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="card margin-top">
+          <div class="card-header-flex">
+            <h3>Liste des Sites Bloqués</h3>
+            <span id="blockedSitesCount" class="badge-count">0 sites</span>
+          </div>
+
+          <!-- Form Add Site -->
+          <form id="addSiteForm" class="add-site-form">
+            <input type="text" id="siteDomainInput" placeholder="Ex: facebook.com, twitter.com ou youtube.com..." required>
+            <button type="submit" class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Ajouter un site
+            </button>
+          </form>
+
+          <!-- Sites Table / List -->
+          <div class="sites-list-table">
+            <div class="table-header">
+              <span>Statut</span>
+              <span>Domaine / URL</span>
+              <span class="text-right">Action</span>
+            </div>
+            <div id="sitesList" class="table-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: RAPPELS PAR DÉFAUT -->
+      <section id="section-reminders" class="config-section">
+        <div class="section-header">
+          <h2>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            Rappels Globaux par Défaut
+          </h2>
+          <p>Définissez les rappels configurés automatiquement lors de la création d'une nouvelle tâche.</p>
+        </div>
+
+        <div class="card">
+          <h3>Notifications & Alarmes</h3>
+          <div class="checkbox-group">
+            <label class="checkbox-card">
+              <input type="checkbox" id="defaultRemind10m" value="before_10m">
+              <div class="checkbox-content">
+                <strong>10 minutes avant la fin</strong>
+                <p>Affiche une notification d'avertissement 10 minutes avant l'échéance prévisionnelle.</p>
+              </div>
+            </label>
+
+            <label class="checkbox-card">
+              <input type="checkbox" id="defaultRemindEnd" value="at_end" checked>
+              <div class="checkbox-content">
+                <strong>À la fin de la durée</strong>
+                <p>Affiche une notification interactive avec les boutons "Terminer" et "Reporter de 5 min".</p>
+              </div>
+            </label>
+
+            <label class="checkbox-card">
+              <input type="checkbox" id="defaultRemindRepeat5m" value="repeat_5m_after" checked>
+              <div class="checkbox-content">
+                <strong>Toutes les 5 minutes après la fin (si non terminée)</strong>
+                <p>Rappels récurrents tant que la tâche reste en retard et non validée.</p>
+              </div>
+            </label>
+          </div>
+
+          <div class="form-actions-left margin-top">
+            <button id="btnSaveReminders" class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              Enregistrer les rappels par défaut
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: RECHERCHE AVEC L'IA -->
+      <section id="section-ai" class="config-section">
+        <div class="section-header">
+          <h2>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+            </svg>
+            Configuration des Fournisseurs IA
+          </h2>
+          <p>Connectez des API IA gratuites ou personnalisées (Format compatible OpenAI <code>/chat/completions</code>).</p>
+        </div>
+
+        <!-- Privacy Box -->
+        <div class="privacy-box card">
+          <div class="privacy-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <div>
+            <strong>Sécurité & Confidentialité Strictes :</strong>
+            <p>Vos clés API sont enregistrées <strong>uniquement</strong> dans <code>chrome.storage.local</code> de votre navigateur. Elles ne sont jamais affichées en clair après enregistrement, jamais intégrées au code source, et jamais transmises ailleurs qu'à l'URL officielle du fournisseur sélectionné.</p>
+          </div>
+        </div>
+
+        <!-- Presets -->
+        <div class="card margin-top">
+          <h3>Offres & Préréglages Gratuits</h3>
+          <p class="sub-text">Cliquez sur un préréglage pour l'ajouter ou réinitialiser sa configuration :</p>
+          <div class="presets-grid">
+            <div class="preset-card">
+              <div class="preset-title">Google Gemini</div>
+              <div class="preset-model">gemini-2.5-flash</div>
+              <p class="preset-desc">Propose une offre gratuite performante via son endpoint compatible OpenAI.</p>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" class="link-external">
+                Obtenir une clé Gemini 
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </a>
+              <button class="btn btn-sm btn-outline btn-add-preset" data-preset="gemini">Ajouter / Configurer</button>
+            </div>
+
+            <div class="preset-card">
+              <div class="preset-title">Groq</div>
+              <div class="preset-model">llama-3.3-70b-versatile</div>
+              <p class="preset-desc">Vitesse d'inférence ultra-rapide et accès gratuit aux modèles Llama 3.</p>
+              <a href="https://console.groq.com/keys" target="_blank" class="link-external">
+                Obtenir une clé Groq 
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </a>
+              <button class="btn btn-sm btn-outline btn-add-preset" data-preset="groq">Ajouter / Configurer</button>
+            </div>
+
+            <div class="preset-card">
+              <div class="preset-title">OpenRouter</div>
+              <div class="preset-model">google/gemini-2.5-flash:free</div>
+              <p class="preset-desc">Accès unifié à une grande variété de modèles gratuits (Llama, Gemini, Qwen...).</p>
+              <a href="https://openrouter.ai/keys" target="_blank" class="link-external">
+                Obtenir une clé OpenRouter 
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </a>
+              <button class="btn btn-sm btn-outline btn-add-preset" data-preset="openrouter">Ajouter / Configurer</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Provider selector -->
+        <div class="card margin-top">
+          <div class="card-header-flex">
+            <h3>Fournisseur IA par Défaut</h3>
+          </div>
+          <div class="form-group">
+            <label for="activeProviderSelect">Fournisseur actif pour vos requêtes :</label>
+            <select id="activeProviderSelect" class="form-select"></select>
+          </div>
+        </div>
+
+        <!-- Configured Providers List -->
+        <div class="card margin-top">
+          <div class="card-header-flex">
+            <h3>Fournisseurs Configurés</h3>
+            <button id="btnAddCustomProvider" class="btn btn-secondary btn-sm">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Fournisseur Personnalisé
+            </button>
+          </div>
+
+          <div id="providersContainer" class="providers-container"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

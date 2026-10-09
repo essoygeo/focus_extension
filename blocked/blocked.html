@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus - Site Bloqué</title>
+  <link rel="stylesheet" href="blocked.css">
+</head>
+
+<body>
+  <div class="ambient-orb orb-1"></div>
+  <div class="ambient-orb orb-2"></div>
+  <div class="ambient-orb orb-3"></div>
+
+  <div class="blocked-container">
+    <div class="blocked-card">
+      <div class="logo-circle">
+        <div class="logo-pulse"></div>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+      </div>
+
+
+
+      <h1 class="blocked-title">Ce site est bloqué</h1>
+      <p class="blocked-subtitle">Terminez vos tâches en cours pour débloquer l'accès à ce contenu. Votre concentration
+        est la priorité.</p>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="stat-value" id="statActiveCount">0</span>
+          <span class="stat-label">Tâches actives</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-card">
+          <span class="stat-value stat-timer" id="statTotalRemaining">00:00</span>
+          <span class="stat-label">Temps restant total</span>
+        </div>
+      </div>
+
+      <div id="tasksSection" class="tasks-section">
+        <div class="section-header">
+          <h3>Tâches à terminer</h3>
+          <span class="section-count" id="sectionCount">0</span>
+        </div>
+        <div id="blockedTaskList" class="blocked-task-list">
+          <div class="loading-text">Chargement des tâches...</div>
+        </div>
+      </div>
+
+      <div id="unlockedBanner" class="unlocked-banner hidden">
+        <div class="unlocked-icon">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <h2>Toutes vos tâches sont terminées !</h2>
+        <p>Le blocage est levé. Excellent travail, vous pouvez reprendre votre navigation.</p>
+        <button id="btnReloadPage" class="btn btn-success">
+          Continuer vers le site
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <div class="blocked-footer">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <span>Focus — Protégez votre temps de concentration pour accomplir l'essentiel.</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="blocked.js"></script>
+</body>
+
+</html>
