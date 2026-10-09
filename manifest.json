@@ -26,6 +26,15 @@
     }
   },
   "options_page": "options/options.html",
+  "commands": {
+    "quick-note": {
+      "suggested_key": {
+        "default": "Alt+Shift+N",
+        "mac": "Alt+Shift+N"
+      },
+      "description": "Créer une note rapide sur la tâche active"
+    }
+  },
   "web_accessible_resources": [
     {
       "resources": [

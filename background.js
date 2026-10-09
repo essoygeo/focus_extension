@@ -306,3 +306,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep channel open for async response
   }
 });
+
+// ── Keyboard shortcut: quick personal note (Alt+Shift+N) ─────────
+chrome.commands.onCommand.addListener((command) => {
+  if (command === 'quick-note') {
+    handleQuickNoteCommand();
+  }
+});
+
+async function handleQuickNoteCommand() {
+  const tasks = await Storage.getTasks();
+  const activeTask =
+    tasks.find(t => t.status === 'in_progress') ||
+    tasks.find(t => t.status === 'overdue') ||
+    tasks.find(t => t.status === 'todo') ||
+    tasks
+      .filter(t => t.status !== 'done')
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+
+  if (!activeTask) {
+    notify('notif_quicknote_warning', {
+      title: '📝 Note rapide',
+      message: 'Aucune tâche active.',
+      contextMessage: "Créez d'abord une tâche pour y rattacher une note.",
+      priority: 1
+    });
+    return;
+  }
+
+  try {
+    await chrome.storage.session.set({
+      pendingQuickNoteTaskId: activeTask.id,
+      pendingQuickNoteTs: Date.now()
+    });
+  } catch (e) { /* storage.session indisponible */ }
+
+  try {
+    await chrome.action.openPopup();
+  } catch (e) {
+    chrome.windows.create({
+      url: chrome.runtime.getURL(`popup/popup.html?quickNote=1&taskId=${encodeURIComponent(activeTask.id)}`),
+      type: 'popup',
+      width: 460,
+      height: 640
+    });
+  }
+}

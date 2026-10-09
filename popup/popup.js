@@ -16,7 +16,7 @@ let timerInterval = null;
 const SVG_PLAY = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
 const SVG_PAUSE = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
 const SVG_CHECK = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-const SVG_SPARKLES = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>`;
+const SVG_FOCUS = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>`;
 const SVG_REFRESH = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>`;
 const SVG_EDIT = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
 const SVG_TRASH = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
@@ -65,11 +65,23 @@ const notesCountBadge = document.getElementById('notesCountBadge');
 const taskNotesDrawer = document.getElementById('taskNotesDrawer');
 const btnCloseNotesDrawer = document.getElementById('btnCloseNotesDrawer');
 const taskNotesList = document.getElementById('taskNotesList');
+const addNoteForm = document.getElementById('addNoteForm');
+const newNoteInput = document.getElementById('newNoteInput');
+const notesHeaderCount = document.getElementById('notesHeaderCount');
+
+// Quick Note Modal
+const noteModal = document.getElementById('noteModal');
+const noteModalTitle = document.getElementById('noteModalTitle');
+const noteTextInput = document.getElementById('noteTextInput');
+const noteForm = document.getElementById('noteForm');
+const btnCloseNoteModal = document.getElementById('btnCloseNoteModal');
+const btnCancelNoteModal = document.getElementById('btnCancelNoteModal');
 
 // Initialize Extension Popup
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
   setupEventListeners();
+  await handlePendingQuickNote();
 
   timerInterval = setInterval(() => {
     updateCountdowns();
@@ -143,6 +155,34 @@ function setupEventListeners() {
   });
   btnCloseNotesDrawer.addEventListener('click', () => {
     taskNotesDrawer.classList.add('hidden');
+  });
+
+  addNoteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await addPersonalNote(newNoteInput.value);
+  });
+
+  newNoteInput.addEventListener('input', () => {
+    newNoteInput.style.height = 'auto';
+    newNoteInput.style.height = Math.min(newNoteInput.scrollHeight, 120) + 'px';
+  });
+
+  newNoteInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      addPersonalNote(newNoteInput.value);
+    }
+  });
+
+  // Quick note modal listeners
+  btnCloseNoteModal.addEventListener('click', () => closeQuickNote());
+  btnCancelNoteModal.addEventListener('click', () => closeQuickNote());
+  noteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await saveQuickNote();
+  });
+  noteModal.addEventListener('click', (e) => {
+    if (e.target === noteModal) closeQuickNote();
   });
 
   // Prompt chips click listener
@@ -291,11 +331,14 @@ function createTaskCard(task) {
       <div class="card-actions-left">
         ${renderTaskPrimaryButtons(task)}
         <button class="btn btn-sm btn-ai btn-open-ai" data-id="${task.id}" title="Rechercher avec l'IA">
-          ${SVG_SPARKLES} IA
+          ${SVG_FOCUS} IA
         </button>
       </div>
 
       <div class="card-actions-right">
+        <button class="icon-action-btn btn-note-task" data-id="${task.id}" title="Note rapide">
+          ${SVG_BOOKMARK}
+        </button>
         <button class="icon-action-btn btn-edit-task" data-id="${task.id}" title="Modifier">
           ${SVG_EDIT}
         </button>
@@ -320,6 +363,9 @@ function createTaskCard(task) {
 
   const btnAi = card.querySelector('.btn-open-ai');
   if (btnAi) btnAi.addEventListener('click', () => openAiPanel(task.id));
+
+  const btnNote = card.querySelector('.btn-note-task');
+  if (btnNote) btnNote.addEventListener('click', () => openQuickNote(task.id));
 
   const btnEdit = card.querySelector('.btn-edit-task');
   if (btnEdit) btnEdit.addEventListener('click', () => openTaskModal(task));
@@ -640,20 +686,25 @@ function createChatBubble(msg, task) {
     bubble.innerHTML = `
       <div class="ai-bubble-header">
         <div class="ai-header-left">
-          <div class="ai-avatar">✨</div>
+          <div class="ai-avatar">${SVG_FOCUS}</div>
           <span class="ai-name">Assistant Focus</span>
-        </div>
-        <div class="bubble-actions">
-          <button class="btn-msg-action btn-save-msg-note" title="Enregistrer dans les notes">
-            ${SVG_BOOKMARK} <span>Note</span>
-          </button>
-          <button class="btn-msg-action btn-copy-msg" title="Copier le texte">
-            ${SVG_COPY} <span>Copier</span>
-          </button>
         </div>
       </div>
       <div class="bubble-content markdown-body">${parseMarkdown(msg.content)}</div>
+      <div class="bubble-footer-actions">
+        <button class="btn-msg-action btn-save-msg-note" title="Enregistrer cette réponse dans les notes">
+          ${SVG_BOOKMARK}<span>Enregistrer en note</span>
+        </button>
+        <button class="btn-msg-action btn-copy-msg" title="Copier la réponse">
+          ${SVG_COPY}<span>Copier</span>
+        </button>
+      </div>
     `;
+
+    const resetActionBtn = (btn, icon, label) => {
+      btn.classList.remove('action-success');
+      btn.innerHTML = `${icon}<span>${label}</span>`;
+    };
 
     const btnSave = bubble.querySelector('.btn-save-msg-note');
     btnSave.addEventListener('click', async () => {
@@ -661,28 +712,23 @@ function createChatBubble(msg, task) {
       task.notes.unshift({
         id: 'note_' + Date.now(),
         text: msg.content,
+        source: 'ai',
         createdAt: Date.now()
       });
       await Storage.saveTasks(tasks);
       renderTaskNotes();
-      
+
       btnSave.classList.add('action-success');
-      btnSave.innerHTML = `${SVG_CHECK} <span>Enregistré !</span>`;
-      setTimeout(() => {
-        btnSave.classList.remove('action-success');
-        btnSave.innerHTML = `${SVG_BOOKMARK} <span>Note</span>`;
-      }, 2000);
+      btnSave.innerHTML = `${SVG_CHECK}<span>Enregistré !</span>`;
+      setTimeout(() => resetActionBtn(btnSave, SVG_BOOKMARK, 'Enregistrer en note'), 2000);
     });
 
     const btnCopy = bubble.querySelector('.btn-copy-msg');
     btnCopy.addEventListener('click', () => {
       navigator.clipboard.writeText(msg.content).then(() => {
         btnCopy.classList.add('action-success');
-        btnCopy.innerHTML = `${SVG_CHECK} <span>Copié !</span>`;
-        setTimeout(() => {
-          btnCopy.classList.remove('action-success');
-          btnCopy.innerHTML = `${SVG_COPY} <span>Copier</span>`;
-        }, 2000);
+        btnCopy.innerHTML = `${SVG_CHECK}<span>Copié !</span>`;
+        setTimeout(() => resetActionBtn(btnCopy, SVG_COPY, 'Copier'), 2000);
       });
     });
   }
@@ -798,6 +844,88 @@ async function resetChatHistory() {
   }
 }
 
+// ── Quick personal note (linked to a specific task) ──────────────
+let quickNoteTaskId = null;
+
+function openQuickNote(taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  quickNoteTaskId = taskId;
+  noteModalTitle.textContent = `Note rapide — ${task.title}`;
+  noteTextInput.value = '';
+  noteModal.classList.remove('hidden');
+  setTimeout(() => noteTextInput.focus(), 60);
+}
+
+function closeQuickNote() {
+  quickNoteTaskId = null;
+  noteModal.classList.add('hidden');
+}
+
+async function saveQuickNote() {
+  const text = noteTextInput.value.trim();
+  const task = quickNoteTaskId ? tasks.find(t => t.id === quickNoteTaskId) : null;
+  if (!text || !task) {
+    closeQuickNote();
+    return;
+  }
+
+  if (!task.notes) task.notes = [];
+  task.notes.unshift({
+    id: 'note_' + Date.now(),
+    text,
+    source: 'user',
+    createdAt: Date.now()
+  });
+  await Storage.saveTasks(tasks);
+
+  if (activeAiTaskId === quickNoteTaskId) renderTaskNotes();
+  closeQuickNote();
+}
+
+async function handlePendingQuickNote() {
+  let targetId = null;
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('quickNote') === '1') {
+    targetId = params.get('taskId');
+  }
+
+  try {
+    const pending = await chrome.storage.session.get(['pendingQuickNoteTaskId', 'pendingQuickNoteTs']);
+    if (pending.pendingQuickNoteTaskId && pending.pendingQuickNoteTs &&
+        Date.now() - pending.pendingQuickNoteTs < 10000) {
+      targetId = pending.pendingQuickNoteTaskId;
+    }
+    await chrome.storage.session.remove(['pendingQuickNoteTaskId', 'pendingQuickNoteTs']);
+  } catch (e) { /* storage.session indisponible */ }
+
+  if (targetId && tasks.some(t => t.id === targetId)) {
+    openQuickNote(targetId);
+  }
+}
+
+async function addPersonalNote(rawText) {
+  const text = (rawText || '').trim();
+  if (!text || !activeAiTaskId) return;
+  const task = tasks.find(t => t.id === activeAiTaskId);
+  if (!task) return;
+
+  if (!task.notes) task.notes = [];
+  task.notes.unshift({
+    id: 'note_' + Date.now(),
+    text,
+    source: 'user',
+    createdAt: Date.now()
+  });
+  await Storage.saveTasks(tasks);
+  renderTaskNotes();
+
+  newNoteInput.value = '';
+  newNoteInput.style.height = 'auto';
+  taskNotesList.scrollTop = 0;
+}
+
 function renderTaskNotes() {
   if (!activeAiTaskId) return;
   const task = tasks.find(t => t.id === activeAiTaskId);
@@ -805,20 +933,63 @@ function renderTaskNotes() {
 
   const notes = task.notes || [];
   notesCountBadge.textContent = notes.length;
+  if (notesHeaderCount) notesHeaderCount.textContent = notes.length;
 
   if (notes.length === 0) {
-    taskNotesList.innerHTML = `<p class="no-notes">Aucune note enregistrée pour l'instant.</p>`;
+    taskNotesList.innerHTML = `
+      <div class="notes-empty">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        <p>Aucune note pour l'instant</p>
+        <span>Enregistrez une réponse de l'assistant ou rédigez votre propre note.</span>
+      </div>`;
     return;
   }
 
   taskNotesList.innerHTML = '';
   notes.forEach(note => {
     const card = document.createElement('div');
-    card.className = 'note-card';
+    const isLong = (note.text || '').length > 260;
+    const isUser = note.source === 'user';
+    card.className = 'note-card' + (isUser ? ' user-note' : '');
+
+    const dateLabel = note.createdAt
+      ? new Date(note.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : '';
+
     card.innerHTML = `
-      <div class="note-text">${escapeHtml(note.text)}</div>
-      <button class="icon-action-btn delete btn-delete-note" data-note-id="${note.id}" title="Supprimer la note">${SVG_TRASH}</button>
+      <div class="note-card-top">
+        <span class="note-source-badge ${isUser ? 'user' : 'ai'}">${isUser ? 'Perso' : 'IA'}</span>
+        ${dateLabel ? `<span class="note-date">${dateLabel}</span>` : ''}
+      </div>
+      <div class="note-text${isLong ? ' collapsed' : ''}">${escapeHtml(note.text)}</div>
+      ${isLong ? '<button type="button" class="note-toggle">Voir plus</button>' : ''}
+      <div class="note-actions">
+        <button type="button" class="btn-note-action btn-copy-note" title="Copier la note">${SVG_COPY}<span>Copier</span></button>
+        <button type="button" class="btn-note-action btn-delete-note" title="Supprimer la note">${SVG_TRASH}<span>Supprimer</span></button>
+      </div>
     `;
+
+    const noteTextEl = card.querySelector('.note-text');
+    const toggleBtn = card.querySelector('.note-toggle');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const collapsed = noteTextEl.classList.toggle('collapsed');
+        toggleBtn.textContent = collapsed ? 'Voir plus' : 'Voir moins';
+      });
+    }
+
+    const btnCopyNote = card.querySelector('.btn-copy-note');
+    btnCopyNote.addEventListener('click', () => {
+      const label = btnCopyNote.querySelector('span');
+      navigator.clipboard.writeText(note.text).then(() => {
+        btnCopyNote.classList.add('action-success');
+        if (label) label.textContent = 'Copié !';
+        setTimeout(() => {
+          btnCopyNote.classList.remove('action-success');
+          if (label) label.textContent = 'Copier';
+        }, 1500);
+      });
+    });
 
     card.querySelector('.btn-delete-note').addEventListener('click', async () => {
       task.notes = task.notes.filter(n => n.id !== note.id);
@@ -834,23 +1005,61 @@ function parseMarkdown(text) {
   if (!text) return '';
   let html = escapeHtml(text);
 
-  // Code blocks
-  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // Bold
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  // Italic
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  // Headings
-  html = html.replace(/^### (.*$)/gim, '<h5 style="margin:8px 0 4px; font-weight:700; color:var(--accent-cyan);">$1</h5>');
-  html = html.replace(/^## (.*$)/gim, '<h4 style="margin:10px 0 4px; font-weight:700; color:var(--text-main);">$1</h4>');
-  // Bullet lists
-  html = html.replace(/^\s*[-•]\s+(.*)$/gim, '<li style="margin-left:14px; margin-bottom:2px;">$1</li>');
-  // Numbered lists
-  html = html.replace(/^\s*(\d+)\.\s+(.*)$/gim, '<li style="margin-left:14px; margin-bottom:2px; list-style-type:decimal;">$2</li>');
-  // Paragraph linebreaks
-  html = html.replace(/\n\n/g, '<br><br>');
+  const codeBlocks = [];
+  html = html.replace(/```([\s\S]*?)```/g, (m, code) => {
+    codeBlocks.push(code.replace(/^\n/, ''));
+    return `\u0000CODE${codeBlocks.length - 1}\u0000`;
+  });
+
+  const inline = (s) => s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+
+  const out = [];
+  let listType = null;
+  const closeList = () => {
+    if (listType) {
+      out.push(listType === 'ul' ? '</ul>' : '</ol>');
+      listType = null;
+    }
+  };
+
+  html.split('\n').forEach(rawLine => {
+    const line = rawLine.trim();
+
+    if (/^\u0000CODE\d+\u0000$/.test(line)) {
+      closeList();
+      out.push(line);
+      return;
+    }
+    if (!line) {
+      closeList();
+      return;
+    }
+
+    let m;
+    if ((m = line.match(/^\d+\.\s+(.*)$/))) {
+      if (listType !== 'ol') { closeList(); out.push('<ol class="md-ol">'); listType = 'ol'; }
+      out.push(`<li>${inline(m[1])}</li>`);
+      return;
+    }
+    if ((m = line.match(/^[-*•]\s+(.*)$/))) {
+      if (listType !== 'ul') { closeList(); out.push('<ul class="md-ul">'); listType = 'ul'; }
+      out.push(`<li>${inline(m[1])}</li>`);
+      return;
+    }
+
+    closeList();
+    if ((m = line.match(/^###\s+(.*)$/))) { out.push(`<h5 class="md-h3">${inline(m[1])}</h5>`); return; }
+    if ((m = line.match(/^##\s+(.*)$/))) { out.push(`<h4 class="md-h2">${inline(m[1])}</h4>`); return; }
+    if ((m = line.match(/^#\s+(.*)$/))) { out.push(`<h3 class="md-h1">${inline(m[1])}</h3>`); return; }
+    out.push(`<p class="md-p">${inline(line)}</p>`);
+  });
+  closeList();
+
+  html = out.join('');
+  html = html.replace(/\u0000CODE(\d+)\u0000/g, (m, i) => `<pre><code>${codeBlocks[+i]}</code></pre>`);
 
   return html;
 }
